@@ -1,0 +1,19 @@
+{
+  "name": "product-photo-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram bot — do'kon mahsulot rasmini oppoq fon + ghost-mannequin (kiyim) yoki stelaj (poyabzal) ko'rinishiga aylantiradi. Gemini nano-banana.",
+  "scripts": {
+    "dev": "node src/dev.js",
+    "start": "node src/dev.js",
+    "set-webhook": "node src/set-webhook.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "grammy": "^1.30.0"
+  }
+}
