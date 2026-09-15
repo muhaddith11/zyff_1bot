@@ -13,7 +13,9 @@ Rasm AI: **Google Gemini** (`nano banana`).
 ## Talablar
 
 - Telegram bot **tokeni** — @BotFather (`/newbot`)
-- **Gemini kaliti** — https://aistudio.google.com/apikey (bepul)
+- **Gemini kaliti** — https://aistudio.google.com/apikey — **billing ulangan bo'lishi shart**:
+  rasm modellari bepul tarifda yo'q (AI Studio → Set up billing, kamida $5 oldindan to'lov;
+  `gemini-3.1-flash-image` ≈ $0.067 / rasm, `gemini-3.1-flash-lite-image` ≈ $0.034 / rasm)
 
 ---
 

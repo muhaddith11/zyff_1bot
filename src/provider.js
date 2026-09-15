@@ -15,10 +15,13 @@ export async function editImage({ buffer, mimeType, prompt }) {
 }
 
 // ── Gemini (nano banana) ───────────────────────────────────────────────────
+// Diqqat: Gemini rasm modellari bepul tarifda YO'Q (429, "limit: 0") — kalit
+// loyihasiga AI Studio'da billing ulangan bo'lishi shart.
 async function editWithGemini({ buffer, mimeType, prompt }) {
   const key = process.env.GEMINI_API_KEY
   if (!key) throw new Error("GEMINI_API_KEY .env'da yo'q — https://aistudio.google.com/apikey")
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash-image'
+  // gemini-2.5-flash-image 2026-10-02 da o'chiriladi. Arzonrog'i: gemini-3.1-flash-lite-image
+  const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-image'
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`
 
   const body = {
@@ -31,8 +34,8 @@ async function editWithGemini({ buffer, mimeType, prompt }) {
         ],
       },
     ],
-    // Rasm chiqishini so'raymiz. Agar model TEXT ham talab qilsa, ['TEXT','IMAGE'] qiling.
-    generationConfig: { responseModalities: ['IMAGE'] },
+    // TEXT ham so'raymiz — barcha rasm modellari qo'llaydi; rad etsa sababini matnda ko'ramiz.
+    generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
   }
 
   const res = await fetch(url, {
@@ -42,11 +45,20 @@ async function editWithGemini({ buffer, mimeType, prompt }) {
   })
   if (!res.ok) {
     const t = await res.text().catch(() => '')
+    console.error(`Gemini ${res.status} (${model}):`, t) // to'liq javob — Vercel loglarida
+    if (res.status === 429) {
+      throw new Error(
+        /limit: 0\b/.test(t)
+          ? `Gemini: "${model}" bepul tarifda ishlamaydi — AI Studio'da billing ulash kerak.`
+          : "Gemini limiti vaqtincha tugadi — 1 daqiqadan keyin qayta urinib ko'ring."
+      )
+    }
     throw new Error(`Gemini ${res.status}: ${t.slice(0, 400)}`)
   }
   const json = await res.json()
   const parts = json?.candidates?.[0]?.content?.parts || []
-  const part = parts.find((p) => p.inlineData || p.inline_data)
+  // Gemini 3 "thinking" oraliq rasmlarini (thought: true) o'tkazib, oxirgi rasmni olamiz.
+  const part = parts.filter((p) => (p.inlineData || p.inline_data) && !p.thought).pop()
   const inline = part?.inlineData || part?.inline_data
   if (!inline?.data) {
     const txt = parts.map((p) => p.text).filter(Boolean).join(' ').slice(0, 300)
