@@ -34,6 +34,26 @@ export function getImage(chatId, id) {
   return images.get(chatId)?.get(id)
 }
 
+// Vercel funksiyasi 60s'dan keyin JAVOBSIZ o'ldiriladi (xato ham yuborilmaydi —
+// foydalanuvchi "Ishlanmoqda..." holatida abadiy qolib ketadi). Shuning uchun
+// rasm AI'ni 45s bilan cheklaymiz: shu vaqtda tugamasa, so'rovni o'zimiz bekor
+// qilib ("abort"), aniq xato bilan javob beramiz — bu doim Vercel o'ldirishidan oldin ishlaydi.
+const IMAGE_TIMEOUT_MS = 45_000
+async function editImageWithTimeout(args) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS)
+  try {
+    return await editImage({ ...args, signal: controller.signal })
+  } catch (e) {
+    if (e?.name === 'AbortError') {
+      throw new Error("Vaqt tugadi — AI juda uzoq javob berdi. \"Qayta urinish\"ni bosing.")
+    }
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 bot.command('start', (ctx) =>
   ctx.reply(
     'Salom! 👋\n\n' +
@@ -105,7 +125,7 @@ bot.callbackQuery(/^angle:(clothing|footwear):(\w+):(\w+)$/, async (ctx) => {
   const status = await ctx.reply('⏳ Ishlanmoqda... (10–30 soniya)')
   try {
     const src = await downloadTelegramFile(fileId)
-    const out = await editImage({ ...src, prompt })
+    const out = await editImageWithTimeout({ ...src, prompt })
     const ext = out.mimeType === 'image/jpeg' ? 'jpg' : 'png'
     const base = kind === 'clothing' ? 'kiyim' : 'poyabzal'
     await ctx.replyWithDocument(new InputFile(out.buffer, `${base}-${angle}.${ext}`), { caption: '✅ Tayyor' })
@@ -114,6 +134,10 @@ bot.callbackQuery(/^angle:(clothing|footwear):(\w+):(\w+)$/, async (ctx) => {
   } catch (e) {
     console.error('Qayta ishlash xatosi:', e)
     await ctx.reply('❌ Xatolik: ' + (e?.message || String(e)))
+    // Rasm hali xotirada (o'chirilmagan) — bitta bosishda qayta urinish mumkin, qayta yuborish shart emas.
+    if (getImage(chatId, id)) {
+      await ctx.reply('🔄 Qayta urinib ko\'ramizmi?', { reply_markup: angleKeyboard(kind, id) })
+    }
   } finally {
     if (chatId != null) ctx.api.deleteMessage(chatId, status.message_id).catch(() => {})
   }

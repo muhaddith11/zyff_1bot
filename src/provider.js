@@ -8,17 +8,25 @@
 //   mimeType — 'image/jpeg' yoki 'image/png'
 //   qaytadi  — yangi (tahrirlangan) rasm baytlari
 
-export async function editImage({ buffer, mimeType, prompt }) {
+export async function editImage({ buffer, mimeType, prompt, signal }) {
   const provider = (process.env.IMAGE_PROVIDER || 'gemini').toLowerCase()
-  if (provider === 'cloudflare') return editWithCloudflare({ buffer, prompt })
+  if (provider === 'cloudflare') return editWithCloudflare({ buffer, prompt, signal })
   if (provider === 'replicate') return editWithReplicate({ buffer, mimeType, prompt })
-  if (provider === 'gemini') return editWithGemini({ buffer, mimeType, prompt })
+  if (provider === 'gemini') return editWithGemini({ buffer, mimeType, prompt, signal })
   throw new Error(`Noma'lum IMAGE_PROVIDER: ${provider} (cloudflare, gemini yoki replicate bo'lsin)`)
 }
 
 // ── Cloudflare Workers AI (FLUX.2 klein) ───────────────────────────────────
 // Bepul reja: kuniga 10 000 neuron; klein-4b da bitta 1024x1024 rasm ≈ 110 neuron.
-async function editWithCloudflare({ buffer, prompt }) {
+//
+// DIQQAT: bu yerda ICHKI qayta urinish YO'Q. Avval 3030 (xavfsizlik filtri)
+// xatosida bir marta avtomatik qayta urinardik — lekin bu umumiy vaqtni ikki
+// baravar oshirib, Vercel'ning 60s function limitiga tushib qolgan (foydalanuvchi
+// "Ishlanmoqda..." holatida abadiy qolib ketgan: funksiya javob yuborishga
+// ulgurmasdan o'ldirilgan). Endi bitta urinish — muvaffaqiyatsiz bo'lsa darhol
+// aniq xato qaytadi, bot.js esa "Qayta urinish" tugmasini qayta ko'rsatadi
+// (foydalanuvchi bir bosishda YANGI so'rov qiladi — yangi, to'liq 60s bilan).
+async function editWithCloudflare({ buffer, prompt, signal }) {
   const account = process.env.CLOUDFLARE_ACCOUNT_ID
   const token = process.env.CLOUDFLARE_API_TOKEN
   if (!account || !token) {
@@ -26,47 +34,42 @@ async function editWithCloudflare({ buffer, prompt }) {
   }
   const model = process.env.CLOUDFLARE_MODEL || '@cf/black-forest-labs/flux-2-klein-4b'
 
-  const input = await shrinkForReference(buffer)
-  const started = Date.now()
+  const form = new FormData()
+  form.append('prompt', prompt)
+  form.append('input_image_0', new Blob([await shrinkForReference(buffer)], { type: 'image/jpeg' }), 'input.jpg')
+  form.append('width', '1024')
+  form.append('height', '1024')
 
-  for (let attempt = 1; ; attempt++) {
-    const form = new FormData()
-    form.append('prompt', prompt)
-    form.append('input_image_0', new Blob([input], { type: 'image/jpeg' }), 'input.jpg')
-    form.append('width', '1024')
-    form.append('height', '1024')
-
-    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${model}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    })
-    const text = await res.text().catch(() => '')
-    let json = null
-    try {
-      json = JSON.parse(text)
-    } catch {}
-    const b64 = json?.result?.image
-    if (res.ok && b64) {
-      return {
-        buffer: Buffer.from(b64, 'base64'),
-        mimeType: b64.startsWith('/9j/') ? 'image/jpeg' : 'image/png',
-      }
+  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${model}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+    signal,
+  })
+  const text = await res.text().catch(() => '')
+  let json = null
+  try {
+    json = JSON.parse(text)
+  } catch {}
+  const b64 = json?.result?.image
+  if (res.ok && b64) {
+    return {
+      buffer: Buffer.from(b64, 'base64'),
+      mimeType: b64.startsWith('/9j/') ? 'image/jpeg' : 'image/png',
     }
-
-    console.error(`Cloudflare ${res.status} (${model}, ${attempt}-urinish):`, text.slice(0, 2000)) // to'liq javob — Vercel loglarida
-    const msg = json?.errors?.map((e) => e.message).join('; ') || text.slice(0, 300)
-    if (/4006|daily free allocation/i.test(msg)) {
-      throw new Error("Bugungi bepul limit tugadi (kuniga 10 000 neuron) — ertaga qayta urinib ko'ring.")
-    }
-    // 3030: xavfsizlik filtri oddiy mahsulot rasmini ham tasodifan bloklaydi (sinovda poyabzalda ~3 dan 1).
-    // Qayta urinish odatda o'tadi — lekin Vercel'ning 60s limitiga sig'ishi uchun faqat vaqt yetsa.
-    if (/3030|flagged/i.test(msg)) {
-      if (attempt === 1 && Date.now() - started < 25_000) continue
-      throw new Error("Rasm AI xavfsizlik filtridan o'tmadi — rasmni qayta yuboring (boshqa burchakdan olingani yaxshiroq).")
-    }
-    throw new Error(`Cloudflare ${res.status}: ${msg}`)
   }
+
+  console.error(`Cloudflare ${res.status} (${model}):`, text.slice(0, 2000)) // to'liq javob — Vercel loglarida
+  const msg = json?.errors?.map((e) => e.message).join('; ') || text.slice(0, 300)
+  if (/4006|daily free allocation/i.test(msg)) {
+    throw new Error("Bugungi bepul limit tugadi (kuniga 10 000 neuron) — ertaga qayta urinib ko'ring.")
+  }
+  // 3030: xavfsizlik filtri oddiy mahsulot rasmini ham tasodifan bloklaydi (sinovda ~3 dan 1;
+  // odam yuzi/portret kabi rasmlarda ehtimol yanada yuqori).
+  if (/3030|flagged/i.test(msg)) {
+    throw new Error('Rasm AI xavfsizlik filtridan o\'tmadi — "Qayta urinish" tugmasini bosing yoki boshqa rasm yuboring.')
+  }
+  throw new Error(`Cloudflare ${res.status}: ${msg}`)
 }
 
 // Workers AI kiruvchi rasmni faqat 512x512 dan kichik qabul qiladi: uzun tomonini
@@ -84,7 +87,7 @@ async function shrinkForReference(buffer) {
 // ── Gemini (nano banana) ───────────────────────────────────────────────────
 // Diqqat: Gemini rasm modellari bepul tarifda YO'Q (429, "limit: 0") — kalit
 // loyihasiga AI Studio'da billing ulangan bo'lishi shart.
-async function editWithGemini({ buffer, mimeType, prompt }) {
+async function editWithGemini({ buffer, mimeType, prompt, signal }) {
   const key = process.env.GEMINI_API_KEY
   if (!key) throw new Error("GEMINI_API_KEY .env'da yo'q — https://aistudio.google.com/apikey")
   // gemini-2.5-flash-image 2026-10-02 da o'chiriladi. Arzonrog'i: gemini-3.1-flash-lite-image
@@ -109,6 +112,7 @@ async function editWithGemini({ buffer, mimeType, prompt }) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal,
   })
   if (!res.ok) {
     const t = await res.text().catch(() => '')
