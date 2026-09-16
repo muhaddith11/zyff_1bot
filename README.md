@@ -5,7 +5,9 @@ Telegram bot: doʻkon mahsulot rasmini **oppoq fonli, professional** rasmga ayla
 - 👕 **Kiyim** → koʻrinmas maniken ustida kiyilgandek (ghost mannequin)
 - 👟 **Poyabzal** → oppoq fonda, stelajda turgandek
 
-Botga rasm yuborasiz → tur (kiyim/poyabzal) tanlaysiz → 10–30 soniyada tayyor rasm qaytadi.
+Botga rasm yuborasiz → tur (kiyim/poyabzal) → burchak (old/orqa; umumiy/yon/old) tanlaysiz →
+10–30 soniyada tayyor rasm qaytadi. Xuddi shu rasmdan boshqa burchak ham so'rash mumkin —
+qayta yuborish shart emas.
 Rasm AI: **Cloudflare Workers AI** (FLUX.2 klein — bepul) yoki **Google Gemini** (`nano banana` — pullik).
 
 ---
