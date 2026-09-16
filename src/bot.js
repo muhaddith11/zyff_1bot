@@ -65,7 +65,8 @@ bot.callbackQuery(/^type:(clothing|footwear)$/, async (ctx) => {
   try {
     const src = await downloadTelegramFile(fileId)
     const out = await editImage({ ...src, prompt: PROMPTS[kind] })
-    const name = kind === 'clothing' ? 'kiyim.png' : 'poyabzal.png'
+    const ext = out.mimeType === 'image/jpeg' ? 'jpg' : 'png'
+    const name = `${kind === 'clothing' ? 'kiyim' : 'poyabzal'}.${ext}`
     await ctx.replyWithDocument(new InputFile(out.buffer, name), { caption: '✅ Tayyor' })
   } catch (e) {
     console.error('Qayta ishlash xatosi:', e)

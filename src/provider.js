@@ -1,6 +1,7 @@
 // Rasm-tahrirlash provayderi. IMAGE_PROVIDER env orqali tanlanadi:
-//   gemini    — Google Gemini "nano banana" (tavsiya: arzon, sifatli, oddiy)
-//   replicate — Black Forest Labs Flux Kontext (global, kredit bilan)
+//   cloudflare — Workers AI FLUX.2 [klein] (bepul: kuniga 10 000 neuron, kartasiz)
+//   gemini     — Google Gemini "nano banana" (sifatli, lekin billing shart)
+//   replicate  — Black Forest Labs Flux Kontext (global, kredit bilan)
 //
 // Interfeys: editImage({ buffer, mimeType, prompt }) -> { buffer, mimeType }
 //   buffer   — kiruvchi rasm baytlari (Telegram'dan yuklangan)
@@ -9,9 +10,75 @@
 
 export async function editImage({ buffer, mimeType, prompt }) {
   const provider = (process.env.IMAGE_PROVIDER || 'gemini').toLowerCase()
+  if (provider === 'cloudflare') return editWithCloudflare({ buffer, prompt })
   if (provider === 'replicate') return editWithReplicate({ buffer, mimeType, prompt })
   if (provider === 'gemini') return editWithGemini({ buffer, mimeType, prompt })
-  throw new Error(`Noma'lum IMAGE_PROVIDER: ${provider} (gemini yoki replicate bo'lsin)`)
+  throw new Error(`Noma'lum IMAGE_PROVIDER: ${provider} (cloudflare, gemini yoki replicate bo'lsin)`)
+}
+
+// ── Cloudflare Workers AI (FLUX.2 klein) ───────────────────────────────────
+// Bepul reja: kuniga 10 000 neuron; klein-4b da bitta 1024x1024 rasm ≈ 110 neuron.
+async function editWithCloudflare({ buffer, prompt }) {
+  const account = process.env.CLOUDFLARE_ACCOUNT_ID
+  const token = process.env.CLOUDFLARE_API_TOKEN
+  if (!account || !token) {
+    throw new Error("CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN env'da yo'q — dash.cloudflare.com → Workers AI → Use REST API")
+  }
+  const model = process.env.CLOUDFLARE_MODEL || '@cf/black-forest-labs/flux-2-klein-4b'
+
+  const input = await shrinkForReference(buffer)
+  const started = Date.now()
+
+  for (let attempt = 1; ; attempt++) {
+    const form = new FormData()
+    form.append('prompt', prompt)
+    form.append('input_image_0', new Blob([input], { type: 'image/jpeg' }), 'input.jpg')
+    form.append('width', '1024')
+    form.append('height', '1024')
+
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${model}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })
+    const text = await res.text().catch(() => '')
+    let json = null
+    try {
+      json = JSON.parse(text)
+    } catch {}
+    const b64 = json?.result?.image
+    if (res.ok && b64) {
+      return {
+        buffer: Buffer.from(b64, 'base64'),
+        mimeType: b64.startsWith('/9j/') ? 'image/jpeg' : 'image/png',
+      }
+    }
+
+    console.error(`Cloudflare ${res.status} (${model}, ${attempt}-urinish):`, text.slice(0, 2000)) // to'liq javob — Vercel loglarida
+    const msg = json?.errors?.map((e) => e.message).join('; ') || text.slice(0, 300)
+    if (/4006|daily free allocation/i.test(msg)) {
+      throw new Error("Bugungi bepul limit tugadi (kuniga 10 000 neuron) — ertaga qayta urinib ko'ring.")
+    }
+    // 3030: xavfsizlik filtri oddiy mahsulot rasmini ham tasodifan bloklaydi (sinovda poyabzalda ~3 dan 1).
+    // Qayta urinish odatda o'tadi — lekin Vercel'ning 60s limitiga sig'ishi uchun faqat vaqt yetsa.
+    if (/3030|flagged/i.test(msg)) {
+      if (attempt === 1 && Date.now() - started < 25_000) continue
+      throw new Error("Rasm AI xavfsizlik filtridan o'tmadi — rasmni qayta yuboring (boshqa burchakdan olingani yaxshiroq).")
+    }
+    throw new Error(`Cloudflare ${res.status}: ${msg}`)
+  }
+}
+
+// Workers AI kiruvchi rasmni faqat 512x512 dan kichik qabul qiladi: uzun tomonini
+// 496px ga tushiramiz, tomonlarni 16 ga karrali qilamiz (FLUX latent o'lchami).
+async function shrinkForReference(buffer) {
+  const { Jimp } = await import('jimp')
+  const img = await Jimp.read(buffer)
+  const scale = Math.min(1, 496 / Math.max(img.width, img.height))
+  const w = Math.max(16, Math.floor((img.width * scale) / 16) * 16)
+  const h = Math.max(16, Math.floor((img.height * scale) / 16) * 16)
+  img.resize({ w, h })
+  return img.getBuffer('image/jpeg', { quality: 92 })
 }
 
 // ── Gemini (nano banana) ───────────────────────────────────────────────────

@@ -6,16 +6,20 @@ Telegram bot: doʻkon mahsulot rasmini **oppoq fonli, professional** rasmga ayla
 - 👟 **Poyabzal** → oppoq fonda, stelajda turgandek
 
 Botga rasm yuborasiz → tur (kiyim/poyabzal) tanlaysiz → 10–30 soniyada tayyor rasm qaytadi.
-Rasm AI: **Google Gemini** (`nano banana`).
+Rasm AI: **Cloudflare Workers AI** (FLUX.2 klein — bepul) yoki **Google Gemini** (`nano banana` — pullik).
 
 ---
 
 ## Talablar
 
 - Telegram bot **tokeni** — @BotFather (`/newbot`)
-- **Gemini kaliti** — https://aistudio.google.com/apikey — **billing ulangan bo'lishi shart**:
-  rasm modellari bepul tarifda yo'q (AI Studio → Set up billing, kamida $5 oldindan to'lov;
-  `gemini-3.1-flash-image` ≈ $0.067 / rasm, `gemini-3.1-flash-lite-image` ≈ $0.034 / rasm)
+- Rasm AI — bittasi yetarli, `IMAGE_PROVIDER` bilan tanlanadi:
+  - **Cloudflare** (`cloudflare`, bepul, kartasiz) — dash.cloudflare.com → AI → Workers AI →
+    **Use REST API**: *Create a Workers AI API Token* + **Account ID**.
+    Kuniga 10 000 neuron: `flux-2-klein-4b` ≈ 90 rasm (asosiy), `flux-2-klein-9b` ≈ 7 rasm.
+  - **Gemini** (`gemini`) — https://aistudio.google.com/apikey — **billing ulangan bo'lishi shart**:
+    rasm modellari bepul tarifda yo'q (AI Studio → Set up billing, oldindan to'lov talab qilinadi;
+    `gemini-3.1-flash-image` ≈ $0.067 / rasm, `gemini-3.1-flash-lite-image` ≈ $0.034 / rasm)
 
 ---
 
@@ -26,8 +30,10 @@ Rasm AI: **Google Gemini** (`nano banana`).
    | Nomi | Qiymati |
    |---|---|
    | `TELEGRAM_BOT_TOKEN` | @BotFather tokeni |
-   | `IMAGE_PROVIDER` | `gemini` |
-   | `GEMINI_API_KEY` | AI Studio kaliti |
+   | `IMAGE_PROVIDER` | `cloudflare` (yoki `gemini`) |
+   | `CLOUDFLARE_ACCOUNT_ID` | Workers AI → Use REST API sahifasidan |
+   | `CLOUDFLARE_API_TOKEN` | Workers AI API tokeni |
+   | `GEMINI_API_KEY` | AI Studio kaliti (faqat `gemini` uchun) |
    | `WEBHOOK_SECRET` | istalgan tasodifiy matn (ixtiyoriy) |
 3. **Deploy** bosing. Manzil oling, masalan `https://product-photo-bot.vercel.app`.
 4. **Webhookni bir marta o'rnating** (lokal terminalda, `.env` to'ldirilgan holda):
@@ -63,7 +69,7 @@ npm run dev
 |---|---|
 | `api/bot.js` | Vercel webhook (kirish nuqtasi) |
 | `src/bot.js` | bot mantiqi (handlerlar) |
-| `src/provider.js` | rasm AI (Gemini; ixtiyoriy Replicate) |
+| `src/provider.js` | rasm AI (Cloudflare / Gemini / Replicate) |
 | `src/prompts.js` | **promptlar — natija sifati shu yerdan sozlanadi** |
 | `src/set-webhook.js` | webhook o'rnatish/o'chirish |
 | `src/dev.js` | lokal polling |
@@ -71,4 +77,5 @@ npm run dev
 ## Sifatni sozlash
 
 Natija ideal bo'lmasa — `src/prompts.js` dagi matnni o'zgartiring (yoki menga ayting).
-Kerak bo'lsa `GEMINI_MODEL` ni almashtirish mumkin.
+Cloudflare (FLUX) natijasi har safar biroz farq qiladi — yoqmasa, rasmni qayta yuboring.
+Modelni almashtirish: `CLOUDFLARE_MODEL` (masalan `@cf/black-forest-labs/flux-2-klein-9b`) yoki `GEMINI_MODEL`.
