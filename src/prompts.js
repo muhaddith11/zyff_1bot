@@ -35,6 +35,16 @@ The ONLY change: replace the original background (wall, floor, shelf, hanger, ro
 Photorealistic, clean seamless edge between the subject and the new background, no artifacts, no leftover pieces of the old background.`,
   },
 
+  // Kiyim/poyabzal bo'lmagan narsalar uchun (sumka, aksessuar, shlyapa va h.k.) —
+  // umumiy "studio rasm" qayta chizish, turga xos shakl talablarisiz.
+  other: {
+    default: `Professional e-commerce product photo of the exact product from the input image.
+Keep the product exactly as it is: same shape, same colors and brightness (no tint), same materials, texture, pattern, logo and every small detail.
+Show only the product, centered and neatly presented in its natural standing or resting position.
+Remove the original background, floor, shelf, other objects and any price tags or hang tags. If the photo shows a real person holding or wearing the product, treat only the product as the subject: completely ignore and remove the person — the output must not include any part of a real human.
+Pure solid white (#FFFFFF) seamless studio background, soft subtle shadow beneath, centered, soft even studio lighting. Photorealistic, sharp focus, high detail, clean catalog style.`,
+  },
+
   footwear: {
     // Umumiy ko'rinish — 3/4 burchak, javondagidek (avvalgi yagona variant).
     overall: `Professional e-commerce product photo of the exact footwear (shoes, sneakers or slippers) from the input image.
@@ -66,4 +76,16 @@ export const ANGLE_LABELS = {
   clothing: { front: '🔵 Old tomon', back: '🔵 Orqa tomon' },
   footwear: { overall: '🔵 Umumiy ko\'rinish', side: '🔵 Yon tomon', front: '🔵 Old tomon' },
   background: { default: '🔄 Qayta urinish' }, // faqat xato bo'lganda ko'rsatiladi (angleKeyboard qayta ishlatiladi)
+  other: { default: '🔄 Qayta urinish' }, // xuddi background kabi — bitta bosqich, burchak yo'q
+}
+
+// Foydalanuvchiga tanlovni tasvirlash uchun (masalan "batch" taklifida): "Kiyim (old tomon)".
+export const KIND_LABEL = { clothing: 'Kiyim', footwear: 'Poyabzal', background: 'Faqat fon oq', other: 'Boshqa mahsulot' }
+export const ANGLE_TEXT = {
+  clothing: { front: 'old tomon', back: 'orqa tomon' },
+  footwear: { overall: 'umumiy', side: 'yon tomon', front: 'old tomon' },
+}
+export function choiceLabel(kind, angle) {
+  const angleText = ANGLE_TEXT[kind]?.[angle]
+  return angleText ? `${KIND_LABEL[kind]} (${angleText})` : KIND_LABEL[kind]
 }

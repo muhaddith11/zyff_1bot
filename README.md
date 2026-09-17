@@ -2,13 +2,22 @@
 
 Telegram bot: doʻkon mahsulot rasmini **oppoq fonli, professional** rasmga aylantiradi.
 
-- 👕 **Kiyim** → koʻrinmas maniken ustida kiyilgandek (ghost mannequin)
-- 👟 **Poyabzal** → oppoq fonda, stelajda turgandek
+- 👕 **Kiyim** → koʻrinmas maniken ustida kiyilgandek (ghost mannequin), old yoki orqa tomon
+- 👟 **Poyabzal** → oppoq fonda, stelajda turgandek, umumiy/yon/old burchak
+- 🎒 **Boshqa mahsulot** → sumka, aksessuar va h.k. uchun umumiy studio ko'rinish
 - 🖼 **Faqat fon oq** → rasmning oʻzi (poza, burchak, hatto ilgich) oʻzgarmaydi, faqat orqa fon oq boʻladi
 
-Botga rasm yuborasiz → tur (kiyim/poyabzal/fon oq) tanlaysiz → kiyim/poyabzalda burchak
-(old/orqa; umumiy/yon/old) ham so'raladi → 10–30 soniyada tayyor rasm qaytadi. Xuddi shu
-rasmdan boshqa burchak ham so'rash mumkin — qayta yuborish shart emas.
+Botga rasm yuborasiz → tur tanlaysiz → kiyim/poyabzalda burchak ham so'raladi →
+10–30 soniyada tayyor rasm qaytadi.
+
+**Qulayliklar:**
+- **Bir nechta rasm ketma-ket** — har biri alohida ishlanadi (aralashib qolmaydi); bittasida
+  tanlov qilsangiz, qolganlariga ham xuddi shuni qo'llashni taklif qilaman (📦).
+- **"🔁 Barchasi"** — kiyim/poyabzalda bitta rasmning barcha burchaklarini bir yo'la oling,
+  har birini alohida so'ramasdan.
+- Har ikkalasi ham vaqtni hisoblab ishlaydi (Vercel 60s limiti) — hammasiga ulgurmasa,
+  "davom etish" tugmasi bilan qolganini so'raydi, hech qachon osilib qolmaydi.
+
 Rasm AI: **Cloudflare Workers AI** (FLUX.2 klein — bepul) yoki **Google Gemini** (`nano banana` — pullik).
 
 ---
