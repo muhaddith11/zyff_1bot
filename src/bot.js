@@ -57,16 +57,21 @@ async function editImageWithTimeout(args) {
 bot.command('start', (ctx) =>
   ctx.reply(
     'Salom! 👋\n\n' +
-      "Menga mahsulot rasmini yuboring — men uni oppoq fonli, professional do'kon rasmiga aylantirib beraman:\n\n" +
-      '👕 Kiyim → koʻrinmas maniken ustida kiyilgandek (old yoki orqa tomon)\n' +
-      '👟 Poyabzal → oppoq fonda, stelajdagidek (umumiy, yon yoki old tomon)\n\n' +
+      "Menga mahsulot rasmini yuboring — quyidagilardan birini tanlaysiz:\n\n" +
+      '👕 Kiyim → koʻrinmas maniken ustida kiyilgandek, oppoq fonda (old yoki orqa tomon)\n' +
+      '👟 Poyabzal → oppoq fonda, stelajdagidek (umumiy, yon yoki old tomon)\n' +
+      '🖼 Faqat fon oq → rasmning O\'ZI o\'zgarmaydi, faqat orqa fon oq bo\'ladi\n\n' +
       'Bir nechta rasmni ketma-ket ham tashlashingiz mumkin — har biri alohida ishlanadi.\n\n' +
       'ℹ️ Eng yaxshi sifat uchun rasmni "Fayl" (siqilmagan) qilib yuboring.'
   )
 )
 
 function kindKeyboard(id) {
-  return new InlineKeyboard().text('👕 Kiyim', `type:clothing:${id}`).text('👟 Poyabzal', `type:footwear:${id}`)
+  return new InlineKeyboard()
+    .text('👕 Kiyim', `type:clothing:${id}`)
+    .text('👟 Poyabzal', `type:footwear:${id}`)
+    .row()
+    .text('🖼 Faqat fon oq', `type:background:${id}`)
 }
 
 function angleKeyboard(kind, id) {
@@ -77,7 +82,7 @@ function angleKeyboard(kind, id) {
 
 async function onImage(ctx, fileId) {
   const id = rememberImage(ctx.chat.id, fileId)
-  await ctx.reply('Bu nima? Turini tanlang:', { reply_markup: kindKeyboard(id) })
+  await ctx.reply('Nima qilamiz?', { reply_markup: kindKeyboard(id) })
 }
 
 // Rasm (siqilgan "photo")
@@ -96,26 +101,13 @@ bot.on('message:document', (ctx) => {
   return onImage(ctx, d.file_id)
 })
 
-// Tur tanlangach — qaysi burchak kerakligini so'raymiz.
-bot.callbackQuery(/^type:(clothing|footwear):(\w+)$/, async (ctx) => {
-  const [, kind, id] = ctx.match
-  await ctx.answerCallbackQuery()
-  const chatId = ctx.chat?.id
-  if (chatId == null || !getImage(chatId, id)) {
-    await ctx.reply('Bu rasm eskirgan — qayta yuboring.')
-    return
-  }
-  await ctx
-    .editMessageText('Qaysi tomondan? 📸', { reply_markup: angleKeyboard(kind, id) })
-    .catch(() => ctx.reply('Qaysi tomondan? 📸', { reply_markup: angleKeyboard(kind, id) }))
-})
+const FILE_BASE = { clothing: 'kiyim', footwear: 'poyabzal', background: 'fon-oq' }
 
-// Burchak tanlangach — rasmni yuklab, AI orqali qayta ishlaymiz.
-bot.callbackQuery(/^angle:(clothing|footwear):(\w+):(\w+)$/, async (ctx) => {
-  const [, kind, angle, id] = ctx.match
+// Rasmni yuklab, AI orqali qayta ishlaymiz (burchak tanlangandan yoki "Fon oq"
+// to'g'ridan-to'g'ri bosilgandan keyin — ikkalasi ham shu funksiyaga tushadi).
+async function processImage(ctx, kind, angle, id) {
   const prompt = PROMPTS[kind]?.[angle]
   const chatId = ctx.chat?.id
-  await ctx.answerCallbackQuery()
   const fileId = chatId != null ? getImage(chatId, id) : undefined
   if (!fileId || !prompt) {
     await ctx.reply('Bu rasm eskirgan — qayta yuboring.')
@@ -127,10 +119,13 @@ bot.callbackQuery(/^angle:(clothing|footwear):(\w+):(\w+)$/, async (ctx) => {
     const src = await downloadTelegramFile(fileId)
     const out = await editImageWithTimeout({ ...src, prompt })
     const ext = out.mimeType === 'image/jpeg' ? 'jpg' : 'png'
-    const base = kind === 'clothing' ? 'kiyim' : 'poyabzal'
-    await ctx.replyWithDocument(new InputFile(out.buffer, `${base}-${angle}.${ext}`), { caption: '✅ Tayyor' })
-    // Xuddi shu rasmdan boshqa burchak ham kerak bo'lishi mumkin — qayta yuborish shart emas.
-    await ctx.reply('Boshqa burchak kerakmi?', { reply_markup: angleKeyboard(kind, id) })
+    const suffix = angle === 'default' ? '' : `-${angle}`
+    await ctx.replyWithDocument(new InputFile(out.buffer, `${FILE_BASE[kind]}${suffix}.${ext}`), { caption: '✅ Tayyor' })
+    // Kiyim/poyabzalda xuddi shu rasmdan boshqa burchak ham kerak bo'lishi mumkin.
+    // "Fon oq"da boshqa burchak yo'q — bitta natijaning o'zi yetarli.
+    if (kind !== 'background') {
+      await ctx.reply('Boshqa burchak kerakmi?', { reply_markup: angleKeyboard(kind, id) })
+    }
   } catch (e) {
     console.error('Qayta ishlash xatosi:', e)
     await ctx.reply('❌ Xatolik: ' + (e?.message || String(e)))
@@ -141,6 +136,31 @@ bot.callbackQuery(/^angle:(clothing|footwear):(\w+):(\w+)$/, async (ctx) => {
   } finally {
     if (chatId != null) ctx.api.deleteMessage(chatId, status.message_id).catch(() => {})
   }
+}
+
+// Tur tanlangach: kiyim/poyabzalda burchak so'raymiz; "Fon oq" darhol ishga tushadi (burchaksiz).
+bot.callbackQuery(/^type:(clothing|footwear|background):(\w+)$/, async (ctx) => {
+  const [, kind, id] = ctx.match
+  await ctx.answerCallbackQuery()
+  const chatId = ctx.chat?.id
+  if (chatId == null || !getImage(chatId, id)) {
+    await ctx.reply('Bu rasm eskirgan — qayta yuboring.')
+    return
+  }
+  if (kind === 'background') {
+    await processImage(ctx, kind, 'default', id)
+    return
+  }
+  await ctx
+    .editMessageText('Qaysi tomondan? 📸', { reply_markup: angleKeyboard(kind, id) })
+    .catch(() => ctx.reply('Qaysi tomondan? 📸', { reply_markup: angleKeyboard(kind, id) }))
+})
+
+// Burchak tanlangach (yoki "Fon oq" qayta urinilganda) — qayta ishlaymiz.
+bot.callbackQuery(/^angle:(clothing|footwear|background):(\w+):(\w+)$/, async (ctx) => {
+  const [, kind, angle, id] = ctx.match
+  await ctx.answerCallbackQuery()
+  await processImage(ctx, kind, angle, id)
 })
 
 async function downloadTelegramFile(fileId) {

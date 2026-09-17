@@ -25,6 +25,16 @@ Pure solid white (#FFFFFF) seamless studio background, soft subtle shadow beneat
 No mannequin, no bust, no neck form, no person, no front view.`,
   },
 
+  // Faqat fonni oqlash — kiyim/poyabzalga xos qayta chizish YO'Q, rasmning o'zi
+  // (poza, burchak, kadr, hatto odam bo'lsa ham) o'zgarishsiz qoladi.
+  background: {
+    default: `Background replacement only — this is NOT a redesign task.
+Keep absolutely everything in this exact photo unchanged: the same product (and the same person, if one is visible, in the exact same pose), the same angle, framing, crop, zoom level, colors, lighting and shadows on the subject, and every detail, tag or label.
+Do not redesign, recolor, reshape, straighten or reinterpret anything in the foreground. Do not add a mannequin. Do not change the pose or the camera angle.
+The ONLY change: replace the original background (wall, floor, shelf, hanger, room, other objects) with a pure solid white (#FFFFFF) seamless studio background, with a soft, subtle contact shadow beneath the subject so it still looks grounded.
+Photorealistic, clean seamless edge between the subject and the new background, no artifacts, no leftover pieces of the old background.`,
+  },
+
   footwear: {
     // Umumiy ko'rinish — 3/4 burchak, javondagidek (avvalgi yagona variant).
     overall: `Professional e-commerce product photo of the exact footwear (shoes, sneakers or slippers) from the input image.
@@ -55,4 +65,5 @@ Pure solid white (#FFFFFF) seamless studio background, soft subtle shadow beneat
 export const ANGLE_LABELS = {
   clothing: { front: '🔵 Old tomon', back: '🔵 Orqa tomon' },
   footwear: { overall: '🔵 Umumiy ko\'rinish', side: '🔵 Yon tomon', front: '🔵 Old tomon' },
+  background: { default: '🔄 Qayta urinish' }, // faqat xato bo'lganda ko'rsatiladi (angleKeyboard qayta ishlatiladi)
 }
