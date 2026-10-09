@@ -35,7 +35,10 @@ export function installAccessControl(bot) {
     const admin = adminId()
     if (!admin) return next()
     const user = ctx.from
-    if (!user) return
+    // Botlar (shu jumladan botning O'ZI) — e'tiborsiz: ro'yxat xabarini pin qilganda Telegram
+    // "bot ai pinned ..." xizmat xabarini bot nomidan yuboradi; avval u "yangi foydalanuvchi"
+    // deb qabul qilinib, adminga botning o'zi haqida so'rov ketgan edi.
+    if (!user || user.is_bot) return
     if (user.id === admin) return next()
 
     let store
