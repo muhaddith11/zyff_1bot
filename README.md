@@ -49,6 +49,7 @@ Rasm AI: **Cloudflare Workers AI** (FLUX.2 klein — bepul) yoki **Google Gemini
    | `CLOUDFLARE_API_TOKEN` | Workers AI API tokeni |
    | `GEMINI_API_KEY` | AI Studio kaliti (faqat `gemini` uchun) |
    | `WEBHOOK_SECRET` | istalgan tasodifiy matn (ixtiyoriy) |
+   | `ADMIN_ID` | admin'ning Telegram ID'si (botda `/id`) — faqat ruxsat berilganlar ishlatadi (ixtiyoriy) |
 3. **Deploy** bosing. Manzil oling, masalan `https://product-photo-bot.vercel.app`.
 4. **Webhookni bir marta o'rnating** (lokal terminalda, `.env` to'ldirilgan holda):
    ```bash
@@ -83,7 +84,9 @@ npm run dev
 |---|---|
 | `api/bot.js` | Vercel webhook (kirish nuqtasi) |
 | `src/bot.js` | bot mantiqi (handlerlar) |
+| `src/access.js` | ruxsat tizimi: yangi odam → adminga so'rov, ro'yxat admin chatidagi pin xabarda |
 | `src/provider.js` | rasm AI (Cloudflare / Gemini / Replicate) |
+| `src/color.js` | AI natijasi rangini asl rasmga qaytarish |
 | `src/prompts.js` | **promptlar — natija sifati shu yerdan sozlanadi** |
 | `src/set-webhook.js` | webhook o'rnatish/o'chirish |
 | `src/dev.js` | lokal polling |

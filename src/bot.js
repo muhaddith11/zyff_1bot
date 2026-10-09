@@ -4,11 +4,13 @@
 import { Bot, InputFile, InlineKeyboard } from 'grammy'
 import { editImage } from './provider.js'
 import { PROMPTS, ANGLE_LABELS, choiceLabel } from './prompts.js'
+import { installAccessControl } from './access.js'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error("TELEGRAM_BOT_TOKEN yo'q. @BotFather dan token oling va env'ga qo'ying.")
 
 export const bot = new Bot(token)
+installAccessControl(bot) // birinchi bo'lib — ruxsatsiz odam quyidagi handlerlarga yetib bormaydi
 
 const SINGLE_STEP_KINDS = new Set(['background', 'other']) // burchak so'ramasdan darhol ishlaydi
 const MULTI_ANGLE_KINDS = new Set(['clothing', 'footwear']) // bir nechta burchagi bor
