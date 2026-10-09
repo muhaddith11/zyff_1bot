@@ -28,7 +28,9 @@ Rasm AI: **Cloudflare Workers AI** (FLUX.2 klein — bepul) yoki **Google Gemini
 - Rasm AI — bittasi yetarli, `IMAGE_PROVIDER` bilan tanlanadi:
   - **Cloudflare** (`cloudflare`, bepul, kartasiz) — dash.cloudflare.com → AI → Workers AI →
     **Use REST API**: *Create a Workers AI API Token* + **Account ID**.
-    Kuniga 10 000 neuron: `flux-2-klein-4b` ≈ 90 rasm (asosiy), `flux-2-klein-9b` ≈ 7 rasm.
+    Asosiy model `flux-2-klein-9b` (mayda detallar — logo, yozuv, zamok, yorliq — aniq saqlanadi):
+    ≈1800 neuron/rasm ≈ $0.02. Kuniga 10 000 neuron bepul (≈5 rasm), keyin Workers Paid bo'yicha.
+    Arzon rejim: `CLOUDFLARE_MODEL=@cf/black-forest-labs/flux-2-klein-4b` (≈110 neuron, lekin detallarni buzadi).
   - **Gemini** (`gemini`) — https://aistudio.google.com/apikey — **billing ulangan bo'lishi shart**:
     rasm modellari bepul tarifda yo'q (AI Studio → Set up billing, oldindan to'lov talab qilinadi;
     `gemini-3.1-flash-image` ≈ $0.067 / rasm, `gemini-3.1-flash-lite-image` ≈ $0.034 / rasm)
@@ -90,4 +92,6 @@ npm run dev
 
 Natija ideal bo'lmasa — `src/prompts.js` dagi matnni o'zgartiring (yoki menga ayting).
 Cloudflare (FLUX) natijasi har safar biroz farq qiladi — yoqmasa, rasmni qayta yuboring.
-Modelni almashtirish: `CLOUDFLARE_MODEL` (masalan `@cf/black-forest-labs/flux-2-klein-9b`) yoki `GEMINI_MODEL`.
+Modelni almashtirish: `CLOUDFLARE_MODEL` (masalan arzonroq `@cf/black-forest-labs/flux-2-klein-4b`) yoki `GEMINI_MODEL`.
+Cloudflare'ga 3 ta rasm ketadi: butun rasm (1024px gacha) + ikki yarmi kattalashtirib (detallar uchun);
+natija rangi asl rasmga qarab avtomatik tuzatiladi (`src/color.js`).
